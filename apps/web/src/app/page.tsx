@@ -26,7 +26,10 @@ export default function HomePage() {
     setResult(null);
 
     try {
-      const response = await fetch("http://localhost:4000/documents/analyze", {
+      const apiBase =
+        process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:4000";
+
+      const response = await fetch(`${apiBase}/documents/analyze`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
@@ -45,9 +48,9 @@ export default function HomePage() {
       }
 
       setResult(data);
-    } catch (error: any) {
+    } catch (err: any) {
       setError(
-        error.message ||
+        err?.message ||
           "Could not connect to the API. Make sure the API is running."
       );
     } finally {
@@ -162,9 +165,7 @@ export default function HomePage() {
           }}
         >
           {!result ? (
-            <p style={{ color: "#6b7280" }}>
-              Your risk report will appear here.
-            </p>
+            <p style={{ color: "#6b7280" }}>Your risk report will appear here.</p>
           ) : (
             <>
               <div
@@ -181,25 +182,25 @@ export default function HomePage() {
               </div>
 
               <h2 style={{ marginBottom: 4 }}>
-                Risk score: {result.decision.overallRiskScore}/100
+                Risk score: {result?.decision?.overallRiskScore ?? 0}/100
               </h2>
 
               <p style={{ marginTop: 0, color: "#4b5563" }}>
-                {result.decision.reason}
+                {result?.decision?.reason || "No reason was returned."}
               </p>
 
               <p>
-                <strong>Document type:</strong> {result.documentType}
+                <strong>Document type:</strong>{" "}
+                {result?.documentType || "general_agreement"}
               </p>
 
               <p>
                 <strong>Confidence:</strong>{" "}
-                {result.decision.confidenceScore}/100
+                {result?.decision?.confidenceScore ?? 0}/100
               </p>
 
               <h3>Top red flags</h3>
-
-              {result.topRedFlags.map((flag: any, index: number) => (
+              {(result?.topRedFlags || []).map((flag: any, index: number) => (
                 <div
                   key={index}
                   style={{
@@ -211,62 +212,30 @@ export default function HomePage() {
                   }}
                 >
                   <strong>{flag.title}</strong>
-                  <p style={{ margin: "6px 0" }}>
-                    {flag.whatCanGoWrong}
-                  </p>
+                  <p style={{ margin: "6px 0" }}>{flag.whatCanGoWrong}</p>
                   <small>
                     <strong>Action:</strong> {flag.whatToDoNow}
                   </small>
                 </div>
               ))}
+
+              <h3>What should you do now?</h3>
+              <ul>
+                {(result?.actionPlan?.immediate || []).map(
+                  (item: string, index: number) => (
+                    <li key={index}>{item}</li>
+                  )
+                )}
+              </ul>
+
+              <h3>Disclaimer</h3>
+              <p style={{ color: "#4b5563" }}>
+                {result?.disclaimer || "RiskLens provides AI-assisted risk insights."}
+              </p>
             </>
           )}
         </div>
       </section>
-
-      {result && (
-        <section
-          style={{
-            marginTop: 20,
-            background: "white",
-            border: "1px solid #e5e7eb",
-            borderRadius: 16,
-            padding: 20
-          }}
-        >
-          <h2>What should you do now?</h2>
-
-          <ul>
-            {result.actionPlan.immediate.map((item: string, index: number) => (
-              <li key={index}>{item}</li>
-            ))}
-          </ul>
-
-          <h3>Before signing or accepting</h3>
-
-          <ul>
-            {result.actionPlan.beforeSigning.map(
-              (item: string, index: number) => (
-                <li key={index}>{item}</li>
-              )
-            )}
-          </ul>
-
-          <h3>Questions to ask</h3>
-
-          <ul>
-            {result.actionPlan.questionsToAsk.map(
-              (item: string, index: number) => (
-                <li key={index}>{item}</li>
-              )
-            )}
-          </ul>
-
-          <h3>Disclaimer</h3>
-
-          <p style={{ color: "#4b5563" }}>{result.disclaimer}</p>
-        </section>
-      )}
     </main>
   );
 }
